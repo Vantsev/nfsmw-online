@@ -95,6 +95,13 @@ HDRSUM="$( (cat runtime/cpu.h runtime/splitscreen_mem.h runtime/web/compat/wasm_
 # default, as on the Mac).
 RT="mem dispatch genexec heap watchdog win32 win32_ext com debug res fileio overrides d3dx_hle vsemu oracle autotest lifecycle widescreen framerate dinput_pad dikeys keyboard dinput_kbd career intro drifttest roam roam_core roam_game mprace mpcredit horn hornmenu optslider tonemenu powerunits radio drift carsfx racehorn racenet racecars winsock online netrace module modheap enhance headlights language sms sponsors lobbyclick olfilter tunegraph menusize regional garage sndlead carshadow hiddenraces visualrep carspot walls movie photo look savegame uniques showoff quickrace cameras vinylcat vinylpacks lightkey trafficcars shownames hudbank"
 RT="$RT splitscreen coop"
+# GAME=mw: Most Wanted (speed.exe).  Only the core: the Underground 2
+# feature modules above name SPEED2.EXE's code and globals, and
+# runtime/feature_weak.c answers the core's calls into them ("not there").
+# The core's own SPEED2.EXE addresses are ported by tools/mwport.sh.
+if [ "${GAME:-u2}" = mw ]; then
+  RT="mem dispatch genexec heap watchdog win32 win32_ext com debug res fileio overrides d3dx_hle vsemu oracle autotest lifecycle widescreen framerate dinput_pad dikeys keyboard dinput_kbd intro winsock module modheap enhance movie feature_weak"
+fi
 WEB="$(cd runtime/web && ls *.c | sed 's/\.c$//')"
 pids=""
 for f in $RT; do
