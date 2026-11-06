@@ -75,7 +75,7 @@ static void *guest_main_thread(void *unused){
 }
 
 int main(int argc, char **argv){
-    const char *exe = argc > 1 ? argv[1] : "/data/SPEED2.EXE";
+    const char *exe = argc > 1 ? argv[1] : "/data/" GUEST_EXE_NAME;
     { extern void autotest_early(void); autotest_early(); }   /* NFSU2_LOG, NFSU2_TIMEOUT */
 
     mem_init();

@@ -644,7 +644,7 @@ int win32_call(CPU *c, uint32_t idx){
         { static uint32_t seen = 0; if (f < 32u && !(seen & (1u << f))){ seen |= 1u << f;
             fprintf(stderr,"[hle] IsProcessorFeaturePresent(%u) -> %u (from 0x%08x)\n", f, r, c->eip); } } }
     else if (!strcmp(n,"GetModuleFileNameA")){ uint32_t p=ARG(c,1),sz=ARG(c,2);
-        const char*s="C:\\\\NFSU2\\\\SPEED2.EXE"; char ms[300];
+        const char*s="C:\\\\NFSU2\\\\" GUEST_EXE_NAME; char ms[300];
         if (module_file_name(ARG(c,0), ms, sizeof ms)) s = ms;   /* server.dll: C:\NFSU2\server.dll */
         uint32_t l=(uint32_t)strlen(s);
         if(p&&sz){ if(l>=sz) l=sz-1; memcpy(g_mem+p,s,l); MR8(p+l)=0; } r=l; }
@@ -822,7 +822,7 @@ void win32_init(void){
     struct timespec ts; clock_gettime(CLOCK_MONOTONIC,&ts);
     tick0 = (uint64_t)ts.tv_sec*1000 + ts.tv_nsec/1000000;
     g_cmdline = gheap_alloc(1, 64, 1);
-    strcpy((char*)(g_mem+g_cmdline), "SPEED2.EXE");
+    strcpy((char*)(g_mem+g_cmdline), GUEST_EXE_NAME);
     /* fill the IAT with magic addresses */
     for (uint32_t i=0;i<g_imp_count;i++) MR32(g_imp[i].iat) = IMP_MAGIC + i;
     com_init();

@@ -12,7 +12,7 @@
 The values for SPEED2.EXE v1.2 NA are the ones runtime/cpu.h had written in:
 0x00401000, 0x00381af1, 0x00932000, 0x0075bed4.
 """
-import struct, sys
+import os, struct, sys
 import pefile
 
 # MSVC 7.x _ftol2: push ebp; mov ebp,esp; sub esp,20h; and esp,-16; fld st0;
@@ -61,6 +61,8 @@ def main():
             f.write("/* tools/exelayout.py: the lifted exe's layout (gen.sh) */\n#ifndef GUEST_LAYOUT_H\n#define GUEST_LAYOUT_H\n")
             for k in ('IMAGE_BASE', 'TEXT_BASE', 'TEXT_SIZE', 'IMAGE_END', 'FTOL2'):
                 f.write(f"#define GUEST_{k} 0x{L[k]:08x}u\n")
+            name = os.path.basename(sys.argv[1]).replace('\\', '').replace('"', '')
+            f.write(f'#define GUEST_EXE_NAME "{name}"\n')
             f.write("#endif\n")
     return 0
 

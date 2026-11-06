@@ -135,6 +135,9 @@ void dispatch_tail(struct CPU *c);
 #define GUEST_IMAGE_LO     0x00400000u
 #define GUEST_IMAGE_HI     0x00932000u
 #endif
+#ifndef GUEST_EXE_NAME
+#define GUEST_EXE_NAME "SPEED2.EXE"   /* the exe's file name: GetModuleFileName, the command line, the web build's /data/ */
+#endif
 typedef void (*guest_fn_t)(struct CPU *);
 extern guest_fn_t g_dtab[DISPATCH_TEXT_SIZE];
 static inline guest_fn_t dispatch_fast(uint32_t a){
