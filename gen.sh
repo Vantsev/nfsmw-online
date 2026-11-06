@@ -30,6 +30,9 @@ echo "HOOKS ($(echo "$HK" | tr ',' '\n' | grep -c .)): $HK"
 export X87PC="${X87PC:-1}"
 echo "X87PC=$X87PC"
 "$PY" tools/reloc2.py "$EXE"
+# the exe's layout: gen/all/layout.h for the runtime, FTOL2 for the lifter
+eval "$("$PY" tools/exelayout.py "$EXE" --header gen/all/layout.h)"; export FTOL2
+echo "layout: text $TEXT_BASE+$TEXT_SIZE, image end $IMAGE_END, _ftol2 $FTOL2 ($FTOL2_HOW)"
 OVERRIDE="$OV" HOOKS="$HK" "$PY" tools/genall.py "$EXE" "${NSHARD:-128}"
 "$PY" tools/argcount.py "$EXE" > out/argcount.log
 echo "gen OK -> gen/all ($(ls gen/all/shard_*.c | wc -l | tr -d ' ') shards)"

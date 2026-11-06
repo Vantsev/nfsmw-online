@@ -53,6 +53,7 @@ if [ "${WEB_LIFT:-opt}" = plain ]; then
 else
   # flagabi.py needs the relocations, which gen.sh would only make later
   "$PY" tools/reloc2.py "$EXE"
+  mkdir -p gen/all; eval "$("$PY" tools/exelayout.py "$EXE" --header gen/all/layout.h)"; export FTOL2
   echo "FLAGABI: interprocedural flag liveness -> out/flagabi.json"
   # flagabi.py sees each function's control flow as the lift will, switches included
   export JTSWITCH="${JTSWITCH:-1}"

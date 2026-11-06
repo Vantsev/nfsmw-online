@@ -217,6 +217,8 @@ def abi_liveness(g, ent, callee_in, returns_flags):
     return live_in.get(ent, F_ALL), after, call_after
 
 _FTOL2INL = __import__('os').environ.get('FTOL2INL', '') == '1'
+# the CRT's _ftol2 in the lifted exe (tools/exelayout.py; gen.sh sets FTOL2); SPEED2.EXE's by default
+_FTOL2 = int(__import__('os').environ.get('FTOL2', '0x0075bed4'), 16)
 def _retpast():
     """tools/retpast.txt, next to this file: callees that can return past their caller"""
     import os as _os
@@ -689,7 +691,7 @@ class Lifter:
                     self.oob_calls = getattr(self,'oob_calls',0)+1
                     return [f"PUSH32(0x{i.address+i.size:x}u); dispatch_indirect(c, 0x{t & 0xffffffff:x}u);"]
                 targets.add(t)
-                if t == 0x0075bed4 and _FTOL2INL:
+                if t == _FTOL2 and _FTOL2 and _FTOL2INL:
                     # FTOL2INL=1: the CRT's _ftol2 in place (cpu.h FTOL2_INL), not a call
                     return [f"PUSH32(0x{i.address+i.size:x}u); FTOL2_INL(c);"]
                 if t in self.retpast:

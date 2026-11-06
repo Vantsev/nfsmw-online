@@ -117,8 +117,24 @@ void dispatch_tail(struct CPU *c);
  * into the dispatcher.  Everything else (COM, Win32, server.dll, generated
  * code, misses, the addresses ICALL/EFXSTAT watch) takes dispatch_indirect /
  * dispatch_tail as before. */
+/* The exe's code section: gen/all/layout.h (tools/exelayout.py, written by
+ * gen.sh) when the lift has one, SPEED2.EXE v1.2 NA's otherwise. */
+#if defined(__has_include)
+# if __has_include("layout.h")
+#  include "layout.h"
+# endif
+#endif
+#ifdef GUEST_TEXT_BASE
+#define DISPATCH_TEXT_BASE GUEST_TEXT_BASE
+#define DISPATCH_TEXT_SIZE GUEST_TEXT_SIZE
+#define GUEST_IMAGE_LO     GUEST_IMAGE_BASE
+#define GUEST_IMAGE_HI     GUEST_IMAGE_END
+#else
 #define DISPATCH_TEXT_BASE 0x00401000u
 #define DISPATCH_TEXT_SIZE 0x00381af1u
+#define GUEST_IMAGE_LO     0x00400000u
+#define GUEST_IMAGE_HI     0x00932000u
+#endif
 typedef void (*guest_fn_t)(struct CPU *);
 extern guest_fn_t g_dtab[DISPATCH_TEXT_SIZE];
 static inline guest_fn_t dispatch_fast(uint32_t a){

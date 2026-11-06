@@ -447,8 +447,8 @@ static void va_free_region(uint32_t g0){
  * [CRT_LO, CRT_HI)); the interesting site is the first return address on the
  * guest stack outside it.  Heuristic (the stack may hold stale values), but
  * good enough to attribute live bytes. */
-#define TEXT_LO 0x00401000u
-#define TEXT_HI 0x00782AF1u
+#define TEXT_LO DISPATCH_TEXT_BASE
+#define TEXT_HI (DISPATCH_TEXT_BASE + DISPATCH_TEXT_SIZE)
 #define CRT_LO  0x0075B000u
 #define CRT_HI  0x00772000u
 static uint32_t site_of(CPU *c){
@@ -1184,8 +1184,8 @@ static uint32_t virtual_query(uint32_t addr, uint32_t mbi, uint32_t len){
     } else if (mem_is_committed(pg)){
         uint32_t e = (pg + 0x4000u) & ~0x3FFFu;
         while (e && mem_is_committed(e) && va_region(e) < 0) e += 0x4000u;
-        int img = pg >= 0x00400000u && pg < 0x00932000u;
-        abase = img ? 0x00400000u : (pg & ~0x3FFFu); aprot = img ? 0x80u : 4u;
+        int img = pg >= GUEST_IMAGE_LO && pg < GUEST_IMAGE_HI;
+        abase = img ? GUEST_IMAGE_LO : (pg & ~0x3FFFu); aprot = img ? 0x80u : 4u;
         rsize = e - pg; state = MEM_COMMIT; prot = img ? 0x40u : 4u; type = img ? MEM_IMAGE : MEM_PRIVATE;
     } else {
         uint32_t e = (pg + 0x4000u) & ~0x3FFFu;
@@ -1306,7 +1306,7 @@ uint32_t heap_api(CPU *c, int k){
         uint32_t a = ARG(c, 0), np = ARG(c, 2), po = ARG(c, 3), old = 0x40u;
         int64_t g0 = g_bump ? -1 : va_region(a);
         if (g0 >= 0){ old = g_va[g0].prot; g_va[g0].prot = np; }
-        else if (!(a >= 0x00400000u && a < 0x00932000u)) old = 4u;
+        else if (!(a >= GUEST_IMAGE_LO && a < GUEST_IMAGE_HI)) old = 4u;
         if (po && mem_is_committed(po) && mem_is_committed(po + 3)) MR32(po) = old;
         r = 1;
         break; }
