@@ -29,7 +29,7 @@ if [ "$have" != "$U2_SHA" ] && [ "${MWPORT_ANY_U2:-}" != 1 ]; then   # MWPORT_AN
 fi
 
 echo "== 1. the Most Wanted folder"
-"$PY" tools/mwprobe.py "$MW" | tee out/mw/probe.txt || [ "${MWPORT_ANY_U2:-}" = 1 ] || { echo "mwport: this folder cannot be lifted (above)"; exit 1; }
+"$PY" tools/mwprobe.py "$MW" "$U2" | tee out/mw/probe.txt || [ "${MWPORT_ANY_U2:-}" = 1 ] || { echo "mwport: this folder cannot be lifted (above)"; exit 1; }
 MWEXE="$MW"; [ -d "$MW" ] && MWEXE="$(find "$MW" -maxdepth 1 -iname speed.exe | head -1)"
 
 echo "== 2. the addresses to port"

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Is this NFS Most Wanted folder (or speed.exe) fit for the lift?  Reads files only.
 
-    tools/mwprobe.py <game folder | speed.exe>
+    tools/mwprobe.py <game folder | speed.exe> [SPEED2.EXE]   (with SPEED2.EXE: are both from one toolchain?)
 
 The lift translates the exe's code as it lies in the file, so the exe has to
 be the game's own code: not packed or encrypted (SecuROM's wrapper, a
@@ -44,6 +44,17 @@ def runtime_imports():
         names |= set(re.findall(r'str(?:case)?cmp\(n, *"([A-Za-z0-9_#@?]+)"\)', open(p, errors='replace').read()))
     return names
 
+def toolchain(pe):
+    """the linker's Rich header: the compiler builds that made the most objects (MSVC only)"""
+    r = pe.parse_rich_header() if hasattr(pe, 'parse_rich_header') else None
+    if not r or not r.get('values'): return None
+    v = r['values']; ent = collections.Counter()
+    for k in range(0, len(v) - 1, 2):
+        comp, cnt = v[k], v[k + 1]
+        ent[(comp >> 16, comp & 0xffff)] += cnt
+    top = sorted(ent.items(), key=lambda x: -x[1])[:3]
+    return ', '.join(f"prod {p} build {b} x{n}" for (p, b), n in top)
+
 def entropy(b):
     if not b: return 0.0
     c = collections.Counter(b); n = len(b)
@@ -70,6 +81,15 @@ def main(argv):
     if pe.OPTIONAL_HEADER.Magic != 0x10b: fatal.append('not PE32')
     if pe.FILE_HEADER.Characteristics & 0x2000: fatal.append('a DLL, not the exe')
     if pe.FILE_HEADER.Characteristics & 0x20: say('note', 'LARGE_ADDRESS_AWARE set (a 4 GB patch): harmless for the port')
+    tc = toolchain(pe)
+    say('compiler', tc or 'no Rich header (not linked by MSVC, or stripped)')
+    if len(argv) > 2 and os.path.isfile(argv[2]):
+        tu = toolchain(pefile.PE(argv[2], fast_load=True))
+        same = tc == tu
+        say('compiler', f"{os.path.basename(argv[2])}: {tu or 'no Rich header'} -> "
+                        + ('unknown (no Rich header to compare)' if tc is None or tu is None else
+                           'the same toolchain: tools/sigport.py matches code well' if same else
+                           'another toolchain: expect fewer exact matches in tools/sigport.py'))
     ib = pe.OPTIONAL_HEADER.ImageBase; end = ib + pe.OPTIONAL_HEADER.SizeOfImage
     ep = ib + pe.OPTIONAL_HEADER.AddressOfEntryPoint
     say('layout', f"image 0x{ib:08x}-0x{end:08x}, entry 0x{ep:08x}")
