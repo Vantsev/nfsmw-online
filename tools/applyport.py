@@ -22,6 +22,7 @@ name SPEED2.EXE and are what is left to do by hand.
 import collections, glob, os, re, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+U2_IMAGE = (0x00400000, 0x00932000)   # SPEED2.EXE's image: the runtime's own memory map lies above it
 SURE = ('exact', 'entry', 'call', 'caller', 'data', 'site/exact', 'site/entry', 'site/call', 'site/caller')
 
 def load(path, min_score):
@@ -49,7 +50,8 @@ def rewrite(text, amap, is_list, left):
         if is_list:
             a = int(m.group('h'), 16)
             if a in amap: return (m.group('pre') or '') + hexlike(m.group('h'), amap[a])
-            left[a] += 1; return m.group(0)
+            if U2_IMAGE[0] <= a < U2_IMAGE[1]: left[a] += 1
+            return m.group(0)
         if m.group('lit'):
             a = int(m.group('lh'), 16)
             if a in amap: return '0x' + hexlike(m.group('lh'), amap[a]) + m.group('ls')
@@ -59,7 +61,7 @@ def rewrite(text, amap, is_list, left):
         else:
             a = int(m.group('dh'), 16)
             if a in amap: return m.group('dx') + '%08x' % amap[a]
-        left[a] += 1
+        if U2_IMAGE[0] <= a < U2_IMAGE[1]: left[a] += 1
         return m.group(0)
     out = []
     for line in text.split('\n'):
@@ -91,7 +93,7 @@ def main(argv):
         if left:
             tot_left += len(left)
             rep.append(f"{os.path.relpath(p, ROOT)}: {len(left)} left: " +
-                       ', '.join(f"0x{a:08x} ({weak.get(a, 'not in table')})" for a in sorted(left)))
+                       ', '.join(f"0x{a:08x} ({weak.get(a, 'comments only')})" for a in sorted(left)))
     summary = f"applyport: {len(amap)} addresses ported, {tot_files} files changed, {tot_left} addresses left as they were"
     rep.insert(0, summary)
     os.makedirs(os.path.join(ROOT, 'out'), exist_ok=True)

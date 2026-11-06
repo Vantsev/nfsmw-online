@@ -100,7 +100,7 @@ RT="$RT splitscreen coop"
 # runtime/feature_weak.c answers the core's calls into them ("not there").
 # The core's own SPEED2.EXE addresses are ported by tools/mwport.sh.
 if [ "${GAME:-u2}" = mw ]; then
-  RT="mem dispatch genexec heap watchdog win32 win32_ext com debug res fileio overrides d3dx_hle vsemu oracle autotest lifecycle widescreen framerate dinput_pad dikeys keyboard dinput_kbd intro winsock module modheap enhance movie feature_weak"
+  RT="$(grep -v '^#' tools/mw_core.txt | tr '\n' ' ')"
 fi
 WEB="$(cd runtime/web && ls *.c | sed 's/\.c$//')"
 pids=""

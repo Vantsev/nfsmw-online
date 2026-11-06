@@ -9,6 +9,8 @@ that from the two exes, this tool says what has to be found.
     tools/u2refs.py                 table on stdout (TSV)
     tools/u2refs.py --summary       counts per file and kind
     tools/u2refs.py --addrs         the distinct addresses, one per line, kind first
+    --core                          only the Most Wanted build's files (tools/mw_core.txt,
+                                    runtime/web, the lift lists)
 
 Kinds, from how the address is used:
     func   a function entry: sub_X / sub_X_orig, dispatch_patch, call_guest,
@@ -90,8 +92,18 @@ def collect():
                 rows.append(('tools/lift.py', n, a, 'func', line.strip()[:90], False))
     return rows
 
+def core_files():
+    mods = []
+    for line in open(os.path.join(ROOT, 'tools/mw_core.txt')):
+        if not line.startswith('#'): mods += line.split()
+    return {f'runtime/{m}.c' for m in mods}
+
 def main():
     rows = collect()
+    if '--core' in sys.argv:
+        keep = core_files()
+        rows = [r for r in rows if r[0] in keep or r[0].startswith(('runtime/web/', 'tools/')) or
+                (r[0].endswith('.h') and r[0].startswith('runtime/'))]
     if '--summary' in sys.argv:
         per = collections.defaultdict(collections.Counter)
         for r in rows:

@@ -1,0 +1,8 @@
+# The runtime modules of the Most Wanted build (web/build.sh GAME=mw), and the
+# files whose SPEED2.EXE addresses tools/mwport.sh ports.  The Underground 2
+# feature modules stay out; runtime/feature_weak.c stands in for their entry
+# points.  runtime/web/*.c is always built and always ported.
+mem dispatch genexec heap watchdog win32 win32_ext com debug res fileio
+overrides d3dx_hle vsemu oracle autotest lifecycle widescreen framerate
+dinput_pad dikeys keyboard dinput_kbd intro winsock module modheap enhance
+movie feature_weak
