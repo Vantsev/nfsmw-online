@@ -1,94 +1,83 @@
-# Need for Speed: Underground 2 in the browser
+# Need for Speed: Most Wanted (2005) в браузере
 
-A fan project that runs the PC game *Need for Speed: Underground 2* (2004) in Google Chrome and Firefox. The game's
-x86 code is translated to C ahead of time and compiled to WebAssembly. Direct3D 9 runs on WebGPU and the sound on
-Web Audio. You bring your own copy of the game.
+Порт PC-версии *Need for Speed: Most Wanted* (2005) в браузер тем же способом, каким
+[th0mk/nfsu2-web](https://github.com/th0mk/nfsu2-web) запускает Underground 2: x86-код игры заранее
+переводится в C и собирается в WebAssembly, Direct3D 9 работает через WebGPU, звук через Web Audio.
+Игру приносишь свою, в репозитории нет ни её кода, ни данных.
 
-Based on [NFSU2Recomp](https://github.com/TalhaMudo/NFSU2Recomp) by Talha Müderrisoğlu, the original x86 → C static
-recompiler for NFSU2. This project was forked from
-[its MIT-licensed version of 16 October 2026](https://github.com/TalhaMudo/NFSU2Recomp/tree/3d187ce7e5f1b99c0580866da4dbaa6d59dd23c7)
-and uses only code from that version.
+> Не связан с Electronic Arts и не одобрен ею. Форк nfsu2-web (MIT, `LICENSE`), его история сохранена,
+> исходный README лежит в [docs/README-nfsu2.md](docs/README-nfsu2.md).
 
-> Not affiliated with or endorsed by Electronic Arts. This repository contains none of the game's code or data.
+## Состояние
 
-![The start page: Play, the controls, your saves and Online](docs/web/start-page.png)
+Игра **ещё не запускается**. Сделано всё, что можно сделать без самих exe: инструменты, которые
+переносят рантайм U2 на `speed.exe`, и сборка, в которой остаётся только ядро.
 
-## What you need
+| Что | Состояние |
+|---|---|
+| Лифтер x86 → C (`tools/lift.py`, `genall.py`) | от U2, почти не зависит от игры. Границы кода, `_ftol2` и имя exe теперь берутся из самого exe (`tools/exelayout.py` → `gen/all/layout.h`) |
+| Релокации (`tools/reloc2.py`) | умеет обычную таблицу, вариант U2 (безымянная секция) и exe без релокаций (скан данных и операндов: на тестовой DLL нашёл 100% указателей на код) |
+| Адреса U2 в рантайме | 981 адрес, из них 373 в ядре MW-сборки (`tools/u2refs.py --core --summary`) |
+| Перенос адресов U2 → MW (`tools/sigport.py`) | готов, проверен на настоящих PE (ниже). Ещё не прогонялся на SPEED2.EXE и speed.exe |
+| Подстановка в исходники (`tools/applyport.py`) | готова |
+| Сборка только ядра (`GAME=mw web/build.sh`) | модули фич U2 выключены, их точки вызова закрыты `runtime/feature_weak.c`. Символы ядра сходятся, wasm ещё не собирался |
+| Проверка папки игры (`tools/mwprobe.py`) | готова |
 
-- **The game:** your own PC copy, patched to v1.2 (North America), with this exact `SPEED2.EXE` (other versions
-  will not work): 4,800,512 bytes, SHA-256 `f9dd86c054878ce6276beb07c1fd61874f7a1e4bf1f241b084c65b73e24168a7`.
-- **To build:** an Apple Silicon Mac (the tested setup) or Linux, Python 3, Node.js 20 or newer, Rust
-  ([rustup](https://rustup.rs)), and [wasi-sdk](https://github.com/WebAssembly/wasi-sdk/releases) 34 for that system
-  unpacked into `deps/`. On Windows,
-  build in WSL 2 with the clone in the Linux file system (`~/nfsu2-web`): under `/mnt/c` it builds much slower.
-- **To play:** the latest Google Chrome, or Firefox where it has WebGPU (Windows, macOS).
+### Насколько можно доверять переносу
 
-## Build
+`tools/sigport_check.py` берёт две сборки одной DLL и сверяет ответы сигпорта с таблицей экспорта
+(сигпорту экспорт не показывают). На 32-битных DLL из Wine:
+
+| Сборки | d3dx9_36 | msvcrt | user32 | kernelbase | wined3d |
+|---|---|---|---|---|---|
+| 11.13 → 11.18 (один тулчейн) | 98% | 97% | | | 100% |
+| 11.7 → 11.18 (один тулчейн, ~5 мес.) | 98% | 97% | 96% | 100% | 97% |
+| 11.0 → 11.18 (GCC → clang) | 0% | 0% | 1% | 0% | |
+
+Ошибочных сопоставлений не было ни разу: то, что сигпорт не нашёл, остаётся пустым. Последняя
+строка показывает предел: при смене компилятора код не совпадает. U2 (2004) и MW (2005) сделаны
+одной студией на одном движке, так что, скорее всего, и одним компилятором. `tools/mwprobe.py`
+проверяет это по Rich-заголовкам обоих exe.
+
+## Что нужно, чтобы двинуться дальше
+
+1. **Установленный Most Wanted, а не ISO.** В репаке FreeArc-архивы с SREP, их распаковывает только
+   его `setup.exe` под Windows (или CrossOver/Wine). Нужна папка с `speed.exe` и папками `CARS`,
+   `FRONTEND`, `GLOBAL`, `TRACKS` и т. д. ASI-моды репака (WidescreenFix, MWFixes, XenonEffects…)
+   порт не загружает, мешать они не будут. Мешает только exe, пропатченный на диске или завёрнутый
+   в защиту: это покажет `tools/mwprobe.py`.
+2. **`SPEED2.EXE` от Underground 2 v1.2 NA**, тот самый (SHA-256 `f9dd86c0…`, см.
+   [docs/README-nfsu2.md](docs/README-nfsu2.md)). Все адреса рантайма взяты из него, а пару каждому
+   можно найти, только сравнив его код с кодом `speed.exe`. Данные U2 не нужны, хватит одного exe.
+
+## Порядок
 
 ```sh
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-web/gen.sh "/path/to/Need for Speed Underground 2/SPEED2.EXE"   # translate the game's code to C (into gen/)
-web/build.sh                                                    # compile it to out/web/nfsu2.wasm
+
+.venv/bin/python tools/mwprobe.py "/путь/к/Most Wanted" "/путь/к/SPEED2.EXE"   # годится ли папка
+tools/mwport.sh "/путь/к/SPEED2.EXE" "/путь/к/Most Wanted"            # отчёт: что нашлось, что нет
+tools/mwport.sh "/путь/к/SPEED2.EXE" "/путь/к/Most Wanted" --apply    # переписать адреса ядра
+
+web/gen.sh "/путь/к/Most Wanted/speed.exe"    # перевести код MW в C (gen/, в git не идёт)
+GAME=mw web/build.sh                           # собрать ядро (нужны wasi-sdk 34 и Rust, см. docs/README-nfsu2.md)
+web/start.sh --data "/путь/к/Most Wanted"
 ```
 
-The generated C and the compiled module are made from the game, so they are never committed (`.gitignore`).
+Всё, что `mwport.sh` не перенёс, перечислено в `out/applyport.txt` по файлам. Эти адреса правятся
+руками. Дальше работа такая же, как в nfsu2-web: запускать, смотреть, где игра падает или зависает,
+и чинить рантайм по одной проблеме. План по этапам: [docs/MW_PORT.md](docs/MW_PORT.md).
 
-## Play
+## Устройство
 
-```sh
-web/start.sh --data "/path/to/Need for Speed Underground 2"
-```
+- `tools/`: лифтер (Capstone) и инструменты переноса: `u2refs.py`, `sigport.py`, `applyport.py`,
+  `mwprobe.py`, `exelayout.py`, `mwport.sh`. Тесты: `tools/test_sigport.py`, `tools/sigport_check.py`.
+- `runtime/`: Windows, Direct3D 9, DirectSound, DirectInput, переписанные заново. Модули ядра для MW
+  перечислены в `tools/mw_core.txt`, остальные относятся к фичам U2.
+- `web/`: страница (WebGPU, AudioWorklet, воркеры) и сервер на Rust.
 
-Open **http://localhost:8080/** in Chrome or Firefox and press **Play**. The start page has the settings, your saves
-and the controls. The player's guide is [docs/web/PLAYING.md](docs/web/PLAYING.md). The game plays in any of its
-thirteen languages, in Brazilian Portuguese, in Polish, in Turkish, in Hungarian, in Ukrainian, in Czech, in Slovak or in Greek; the
-dubbed voices and movies and the Portuguese, Polish, Hungarian, Ukrainian, Czech and Slovak text come from mods (Czech's
-with this repository's own texts for what it left in German or empty, `tools/lang/czech.json`), the Turkish text is this repository's own translation
-(`tools/lang/turkish.json`, with a mod's fonts), the Greek text a contributor's (`tools/lang/greek.json`, with Greek
-letters drawn into the game's fonts by `tools/greekfont`), as language packs. The menus and HUD can be redrawn at four times
-their size, from a mod as a texture pack.
+## Благодарности
 
-To play with friends, run the server behind HTTPS (other PCs need a secure context): `web/deploy/` has a Docker setup.
-Everyone who plays from the same server can meet in free roam.
-
-## How it works
-
-- **`tools/`:** a Python lifter (Capstone) turns every function of `SPEED2.EXE` into C.
-- **`runtime/`:** Windows, Direct3D 9, DirectSound and DirectInput, reimplemented. `runtime/web/` holds the browser
-  parts.
-- **`web/src/`:** the page. It runs the game's threads as workers on one shared memory, draws with WebGPU and plays
-  sound through an AudioWorklet.
-- **`web/server-rs/`:** the server, in Rust: serves the page, the module and your game folder, and connects players
-  for multiplayer.
-
-The same tree still builds the native macOS version
-(`./gen.sh`, `./build.sh && ./link.sh`, `./run.sh`).
-
-## Credits
-
-Based on Talha Müderrisoğlu's [NFSU2Recomp](https://github.com/TalhaMudo/NFSU2Recomp) (its MIT version, see the
-top), the static recompilation of NFSU2 for Apple Silicon, which in turn follows the method of
-[N64: Recompiled](https://github.com/N64Recomp/N64Recomp) and [XenonRecomp](https://github.com/hedge-dev/XenonRecomp).
-The language packs are built from KyoriAsh's [Multi 13 languages mod](https://nfsmods.xyz/mod/5749) (with Lee-Ryo's
-Thai support, whose patch `runtime/language.c` follows), from TraduMix's and MixMods' Brazilian Portuguese
-translation (Fyro, Beater, Kerlyston F.; Junior_Djjr, SideWinder, Elyzandro), from PLProjekt's Polish translation
-(Daniel Graszka, MaDeR, Marcin Piech, Nati, Mateusz Wilkowski, alter), from VileStuff's
-[English Subtitles Fixed](https://nfsmods.xyz/mod/5286), from muntazam's
-[Turkish translation](https://www.moddb.com/mods/need-for-speed-underground-2-turkish-translation-patch) (its fonts), from
-GameHunter's [Hungarian translation](http://www.gamehunter.hu/2010/08/need-for-speed-underground-2-pc.html)
-(L_zooltan), from Clark X.'s [Ukrainian translation](https://kuli.com.ua/need-for-speed-underground-2), from ROXOR's and
-PINĎA & syn's Czech translation and from MixerX's Slovak one ([abcgames.cz](https://www.abcgames.cz/?p=preklady_zobraz&id=7774)). The texture packs are built from LunicAura106's
-[Upscaled HUD](https://nfsmods.xyz/mod/4319) and JeansBig's [Detailed Map](https://nfsmods.xyz/mod/4485), the
-uncensored songs from xGMVx's [Uncensored & Restored Soundtrack](https://nfsmods.xyz/mod/3649), and Art Factory 28 to
-34 from the underground2.net Team & Contributors' [PC port](https://nfsmods.xyz/mod/2004) of the Japanese release's
-vinyls. Split screen is BirdSentinel (Zack)'s port of mihaits'
-[NFSU2-SplitScreen](https://github.com/mihaits/NFSU2-SplitScreen). Other changes follow what these mods found out
-about the game: ThirteenAG's, Aero_'s and xan1242's [Widescreen Fixes Pack](https://nfsmods.xyz/mod/3327), dstudnicki's
-[NFSU2 High FPS Audio Fix](https://github.com/dstudnicki/NFSU2HighFPSAudioFix), the ExOpts Team's
-[NFSU2 Extra Options](https://nfsmods.xyz/mod/290), MaxHwoy's [Show Hidden Races Mod](https://nfsmods.xyz/mod/1583)
-and thelink2012's [Visual Reputation Remover](https://nfsmods.xyz/mod/2773). The start page's Mods tab lists them all.
-Built with the help of Claude Code.
-
-## License
-
-MIT ([LICENSE](LICENSE)). *Need for Speed* and *Need for Speed: Underground 2* are trademarks of Electronic Arts Inc.
+Проект целиком стоит на [nfsu2-web](https://github.com/th0mk/nfsu2-web) (th0mk) и
+[NFSU2Recomp](https://github.com/TalhaMudo/NFSU2Recomp) (Talha Müderrisoğlu), а те, в свою очередь, на
+[N64: Recompiled](https://github.com/N64Recomp/N64Recomp) и [XenonRecomp](https://github.com/hedge-dev/XenonRecomp).
